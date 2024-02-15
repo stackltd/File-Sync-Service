@@ -44,7 +44,7 @@ def main():
             data_cloud_delta = (data_cloud_2 - data_cloud_1).seconds
             os.chdir(path_source)
             # Получения данных из облака при старте, возникновении ошибках, или по истечении таймаута для облака
-            if (start or data_cloud_delta > cloud_scan_time_delta) or errors:
+            if start or data_cloud_delta > cloud_scan_time_delta or errors:
                 uploader.cloud_info = uploader.get_info()
                 if not start:
                     data_cloud_1 = datetime.now()
