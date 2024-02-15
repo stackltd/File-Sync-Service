@@ -7,7 +7,6 @@ from loguru import logger
 
 BASE_URL = 'https://cloud-api.yandex.net/v1/disk/resources'
 TOKEN = dotenv_values()["TOKEN"]
-os.environ["DEBUSSY"] = "1"
 HEADERS = {'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': f'OAuth {TOKEN}'}
 
 
