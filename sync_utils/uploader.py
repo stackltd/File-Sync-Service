@@ -66,5 +66,6 @@ class UploaderToCloud:
             logger.error(f"Ошибка соединения. Не удалось удалить файл {self.file_for_delete}.")
             return
 
+
 if __name__ == "__main__":
     pass
