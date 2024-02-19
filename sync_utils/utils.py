@@ -15,9 +15,10 @@ path_source = os.getenv("path_source")
 path_dist = os.getenv("path_dist")
 timeout = int(os.getenv("timeout"))
 path_to_log = os.getenv("path_to_log")
-cloud_scan_time_delta = 10
-all_files = []
+cloud_scan_time_delta = 50
+os.chdir(path_source)
 uploader = UploaderToCloud(path_source=path_source, path_dist=path_dist)
+uploader.get_all_local_files()
 
 
 def initializing(start_program, data_time, error_check):
@@ -30,9 +31,9 @@ def initializing(start_program, data_time, error_check):
     """
     data_cloud_2 = datetime.now()
     data_cloud_delta = (data_cloud_2 - data_time).seconds
-    os.chdir(path_source)
     if start_program or data_cloud_delta > cloud_scan_time_delta or error_check:
-        uploader.cloud_info = uploader.get_info()
+        limit_len_dist = len(uploader.all_files) + 5
+        uploader.cloud_info = uploader.get_info(limit=limit_len_dist)
         if not start_program:
             data_time = datetime.now()
         if uploader.cloud_info is not None:
@@ -57,7 +58,6 @@ def control_local_folder(check_changed, errors):
             logger.info(f"Синхронизация отключена.")
             return
         elif os.path.isfile(file):
-            all_files.append(file)
             data_change_source = datetime.fromtimestamp(os.path.getmtime(file))
             # Загрузка файла в облако
             if file not in uploader.cloud_info.keys() and not errors:
@@ -81,7 +81,7 @@ def control_local_folder(check_changed, errors):
 
 
 def delete():
-    result = uploader.delete(list_local_folder=all_files)
+    result = uploader.delete(list_local_folder=uploader.all_files)
     return result
 
 
@@ -89,9 +89,10 @@ def finishing(check_changed, data_time, error_check):
     if check_changed:
         check_changed = False
         data_time = datetime.now()
-        uploader.cloud_info = uploader.get_info()
+        limit_len_dist = len(uploader.all_files) + 5
+        uploader.cloud_info = uploader.get_info(limit=limit_len_dist)
         if uploader.cloud_info is None:
             error_check = True
-    all_files.clear()
+    uploader.get_all_local_files()
     time.sleep(timeout)
     return check_changed, data_time, error_check

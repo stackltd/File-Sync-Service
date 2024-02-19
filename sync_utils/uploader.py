@@ -17,9 +17,13 @@ class UploaderToCloud:
         self.path_dist = path_dist
         self.cloud_info = {}
         self.file_for_delete = ""
+        self.all_files = []
 
-    def get_info(self):
-        url = f'{BASE_URL}?path={self.path_dist}'
+    def get_all_local_files(self):
+        self.all_files = [file for file in os.listdir() if os.path.isfile(file)]
+
+    def get_info(self, limit):
+        url = f'{BASE_URL}?path={self.path_dist}&limit={limit}'
         try:
             result = requests.get(url=url, headers=HEADERS).json()
             meta_info = result["_embedded"]["items"]
