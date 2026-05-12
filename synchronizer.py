@@ -1,12 +1,29 @@
-import os
 import sys
+import os
 import time
-from datetime import datetime
 
-from dotenv import load_dotenv, find_dotenv
 from loguru import logger
 
-from sync_utils import utils
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
+
+from control.cloud_control import UploaderToCloud
+from control.local_control import LocalsFiles
+from clouds.yandex_cloud import YandexDiskProvider
+
+path_source = os.getenv("path_source")
+timeout = int(os.getenv("timeout"))
+yandex_token = os.getenv("TOKEN")
+cloud_scan_time_delta = int(os.getenv("cloud_scan_time_delta"))
+os.chdir(path_source)
+
+# выбираем в качестве облака yandex disc
+yandex_storage = YandexDiskProvider(yandex_token)
+uploader = UploaderToCloud(yandex_storage)
+
+# получение списка локальных файлов
+LocalsFiles.get_all_local_files()
 
 
 def main():
@@ -14,14 +31,10 @@ def main():
     Функция синхронизации папки на локальном диске с облачным хранилищем
     :return:
     """
-    start = True
-    is_changed = False
-    errors = False
     load_dotenv(find_dotenv())
 
     path_to_log = os.getenv("path_to_log")
-    time_reload = 5
-    data_cloud_1 = datetime.now()
+    time_reload = int(os.getenv("time_reload"))
 
     logger.remove()
     format_out = "{module} <green>{time:YYYY-MM-DD HH:mm:ss,SSS}</green> {level} <level>{message}</level>"
@@ -31,26 +44,23 @@ def main():
     while True:
         try:
             # Инициализация, получение данных с облака
-            start, data_cloud_1, errors = utils.initializing(start_program=start, data_time=data_cloud_1,
-                                                             error_check=errors)
+            uploader.initializing()
             # контроль папки слежения, загрузка в облако новых, или измененных файлов
-            result = utils.control_local_folder(check_changed=is_changed, errors=errors)
-            if result is None:
+            uploader.control_local_folder()
+            if uploader.check_changed is None:
                 break
-            else:
-                is_changed = result
             # удаление посторонних файлов из облака
-            result = utils.delete()
+            result = uploader.delete()
             if result is None:
-                errors = True
+                uploader.errors = True
             else:
-                is_changed = True
+                uploader.is_changed = True
             # завершение периода слежения, подготовка к следующему
-            is_changed, data_cloud_1, errors = utils.finishing(is_changed, data_cloud_1, errors)
+            uploader.finishing()
 
         except (FileNotFoundError, AttributeError) as ex:
             info_error = ex.__repr__()
-            errors = True
+            uploader.errors = True
             if "FileNotFoundError" in info_error:
                 logger.error(f"{ex}. Неверно указан путь к локальной папке")
             logger.info(f"Следующая попытка синхронизации через {time_reload} c.")
