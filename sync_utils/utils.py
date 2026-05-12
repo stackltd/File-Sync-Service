@@ -15,7 +15,7 @@ path_source = os.getenv("path_source")
 path_dist = os.getenv("path_dist")
 timeout = int(os.getenv("timeout"))
 path_to_log = os.getenv("path_to_log")
-cloud_scan_time_delta = 50
+cloud_scan_time_delta = 60
 os.chdir(path_source)
 uploader = UploaderToCloud(path_source=path_source, path_dist=path_dist)
 uploader.get_all_local_files()
