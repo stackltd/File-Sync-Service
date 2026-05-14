@@ -33,6 +33,7 @@ class UploaderToCloud:
         self.error_check = False  # флаг появления ошибки
         self.check_changed = False
         self.limit_len_dist = 0
+        self.pause = False
 
     def _initializing(self):
         """
@@ -101,10 +102,15 @@ class UploaderToCloud:
         for file in file_list:
             # Отключение слежения, если создан файл "0"
             if os.path.isfile(file) and file == "0":
-                os.remove("0")
+                os.remove(file)
                 logger.info(f"Синхронизация отключена.")
+                self.pause = True
                 return
-            elif os.path.isfile(file):
+            elif file == "1":
+                os.remove(file)
+                logger.info(f"Синхронизация включена.")
+                self.pause = False
+            elif os.path.isfile(file) and not self.pause:
                 data_change_source = datetime.fromtimestamp(os.path.getmtime(file))
                 # Загрузка файла в облако
                 if file not in self.cloud_info.keys() and not self.error_check:

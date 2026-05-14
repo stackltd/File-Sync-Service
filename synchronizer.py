@@ -46,9 +46,8 @@ def main():
     while True:
         try:
             uploader.check_local_folder()
-            if uploader.check_changed is None:
-                break
-            uploader.control_cloud_folder()
+            if not uploader.pause:
+                uploader.control_cloud_folder()
         except AttributeError as ex:
             uploader.error_check = True
             logger.info(f" {ex} Следующая попытка синхронизации через {time_reload} c.")
