@@ -1,18 +1,15 @@
-import os
+from typing import BinaryIO, Dict
 
 import requests
-from loguru import logger
 
 from clouds.base import CloudStorage
-
-BASE_URL = "https://cloud-api.yandex.net/v1/disk/resources"
-path_source = os.getenv("path_source")
-path_dist = os.getenv("path_dist")
 
 
 class YandexDiskProvider(CloudStorage):
 
-    def __init__(self, token: str):
+    def __init__(self, token: str, base_url: str, path_dist: str):
+        self.BASE_URL = base_url
+        self.path_dist = path_dist
         self.HEADERS = {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -22,27 +19,22 @@ class YandexDiskProvider(CloudStorage):
     def __str__(self):
         return "Яндекс-диск"
 
-    def get_files(self, limit: int):
-        url = f"{BASE_URL}?path={path_dist}&limit={limit}"
+    def get_files(self, limit: int) -> Dict[str, str]:
+        url = f"{self.BASE_URL}?path={self.path_dist}&limit={limit}"
         result = requests.get(url=url, headers=self.HEADERS).json()
         meta_info = result["_embedded"]["items"]
         names = {info["name"]: info["modified"] for info in meta_info}
         return names
 
-    def upload(self, file_name, overwrite: bool = False):
-        url = f"{BASE_URL}/upload?path={path_dist}/{file_name}&overwrite={overwrite}"
-        result = requests.get(url=url, headers=self.HEADERS).json()
-        path_to_local_file = os.path.join(path_source, file_name)
-        with open(path_to_local_file, "rb") as f:
-            requests.put(result["href"], files={"file": f})
-        return True
+    def upload(self, file_name, file_obj: BinaryIO, overwrite: bool = False):
+        url = f"{self.BASE_URL}/upload?path={self.path_dist}/{file_name}&overwrite={overwrite}"
+        result_1 = requests.get(url=url, headers=self.HEADERS)
+        result_2 = requests.put(result_1.json()["href"], files={"file": file_obj})
+        if result_1.status_code == 200 and result_2.status_code == 201:
+            return True
 
-    def delete(self, cloud_files, list_local_folder):
-        for file_name in cloud_files:
-            url = f"{BASE_URL}?path={path_dist}/{file_name}"
-            if file_name not in list_local_folder:
-                self.file_for_delete = file_name
-                requests.delete(url=url, headers=self.HEADERS)
-                logger.info(f"Файл {file_name} удален")
-        else:
+    def delete(self, file_name):
+        url = f"{self.BASE_URL}?path={self.path_dist}/{file_name}"
+        result = requests.delete(url=url, headers=self.HEADERS)
+        if result.status_code == 204:
             return True

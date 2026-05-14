@@ -1,5 +1,6 @@
 # Интерфейс
 from abc import ABC, abstractmethod
+from typing import BinaryIO
 
 
 class CloudStorage(ABC):
@@ -12,7 +13,7 @@ class CloudStorage(ABC):
         pass
 
     @abstractmethod
-    def upload(self, file_name: str, overwrite: bool):
+    def upload(self, file_name: str, file_obj: BinaryIO, overwrite: bool):
         """
         Загрузка/изменение файла в облако из локальной папки
         :param file_name: Имя файла
@@ -22,11 +23,10 @@ class CloudStorage(ABC):
         pass
 
     @abstractmethod
-    def delete(self, cloud_files, list_local_folder: list):
+    def delete(self, file_name: str):
         """
-        Удаление файлов из облака, если они отсутствует в папке слежения.
-        :param cloud_files: словарь файлов в облаке {"name": "время создания/изменения"}
-        :param list_local_folder: список файлов в папке слежения
+        Удаление файла из облака.
+        :param file_name: имя файла
         :return: При успешном удалении возвращает True
         """
         pass
