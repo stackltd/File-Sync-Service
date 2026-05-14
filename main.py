@@ -1,3 +1,4 @@
+import argparse
 import sys
 import os
 import time
@@ -9,13 +10,16 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
 from control.cloud_control import UploaderToCloud
-from control.local_control import LocalsFiles
 from settings import clouds
 
-# выбираем нужное облако
-cloud = clouds["yandex"]
 
+parser = argparse.ArgumentParser(description="Сервис синхронизации файлов")
+# передача нужного облако из консоли
+parser.add_argument("cloud")
+args = parser.parse_args()
+current_cloud = args.cloud
 
+cloud = clouds[current_cloud]
 token = cloud.get("token")
 
 path_source = cloud.get("path_source")

@@ -101,7 +101,7 @@ class UploaderToCloud:
         file_list = LocalsFiles.all_files
         for file in file_list:
             # Отключение слежения, если создан файл "0"
-            if os.path.isfile(file) and file == "0":
+            if file == "0":
                 os.remove(file)
                 logger.info(f"Синхронизация отключена.")
                 self.pause = True
@@ -110,7 +110,11 @@ class UploaderToCloud:
                 os.remove(file)
                 logger.info(f"Синхронизация включена.")
                 self.pause = False
-            elif os.path.isfile(file) and not self.pause:
+            elif file == "---":
+                os.remove(file)
+                logger.info(f"Программа завершена.")
+                exit(0)
+            elif not self.pause:
                 data_change_source = datetime.fromtimestamp(os.path.getmtime(file))
                 # Загрузка файла в облако
                 if file not in self.cloud_info.keys() and not self.error_check:
