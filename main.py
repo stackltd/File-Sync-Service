@@ -14,12 +14,15 @@ from settings import clouds
 
 
 parser = argparse.ArgumentParser(description="Сервис синхронизации файлов")
-# передача нужного облако из консоли
+# приём нужного облако из консоли
 parser.add_argument("cloud")
 args = parser.parse_args()
 current_cloud = args.cloud
 
-cloud = clouds[current_cloud]
+cloud = clouds.get(current_cloud)
+if cloud is None:
+    logger.error("Ошибка в названии облака. Программа завершена")
+    exit(1)
 token = cloud.get("token")
 
 path_source = cloud.get("path_source")
