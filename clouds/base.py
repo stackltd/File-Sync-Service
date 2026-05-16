@@ -4,6 +4,8 @@ from typing import BinaryIO
 
 
 class CloudStorage(ABC):
+    """Контроль состояния облака"""
+
     @abstractmethod
     def get_files(self, limit: int):
         """

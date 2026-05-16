@@ -27,3 +27,11 @@ clouds = {
         "path_to_log": r"D:\Skillbox_Projects\asd\logs\google.log",
     },
 }
+
+exit_from_program = "---"
+
+_file_signals = {
+    "0": "Синхронизация отключена",
+    "1": "Синхронизация включена",
+    exit_from_program: "Программа завершена",
+}

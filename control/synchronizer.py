@@ -7,13 +7,15 @@ from requests.exceptions import ConnectionError
 from loguru import logger
 
 from clouds.base import CloudStorage
-from control.local_control import LocalsFiles
+from locals.local_storage import LocalsFiles
+from settings import exit_from_program, _file_signals
 
 
 class UploaderToCloud:
 
     def __init__(
         self,
+        file_storage: LocalsFiles,
         storage: CloudStorage,
         cloud_scan_time_delta: int,
         timeout: int,
@@ -23,7 +25,9 @@ class UploaderToCloud:
         self.cloud_scan_time_delta = cloud_scan_time_delta
         self.timeout = timeout
         self.path_source = path_source
+        self.file_list = []
 
+        self.file_storage = file_storage
         self.storage = storage
         self.cloud_info = {}  # {"name": "время создания/изменения"}
         self.start_program = True  # Флаг старта программы
@@ -39,7 +43,7 @@ class UploaderToCloud:
         """
         Функция получения данных из облака при старте, возникновении ошибки, или по истечении таймаута для облака.
         """
-        LocalsFiles.get_all_local_files()
+        self.file_list = self.file_storage.get_all_local_files()
 
         data_cloud_2 = datetime.now()
         data_cloud_delta = (data_cloud_2 - self.data_time).seconds
@@ -48,7 +52,7 @@ class UploaderToCloud:
             or data_cloud_delta > self.cloud_scan_time_delta
             or self.error_check
         ):
-            self.limit_len_dist = len(LocalsFiles.all_files) + 5
+            self.limit_len_dist = len(self.file_list) + 5
             self.cloud_info = self.storage.get_files(limit=self.limit_len_dist)
             if not self.start_program:
                 self.data_time = datetime.now()
@@ -70,15 +74,14 @@ class UploaderToCloud:
         if self.check_changed:
             self.check_changed = False
             self.data_time = datetime.now()
-            self.limit_len_dist = len(LocalsFiles.all_files) + 5
+            self.limit_len_dist = len(self.file_list) + 5
             self.cloud_info = self.storage.get_files(limit=self.limit_len_dist)
             if self.cloud_info is None:
                 self.error_check = True
-        LocalsFiles.get_all_local_files()
+        self.file_list = self.file_storage.get_all_local_files()
         time.sleep(self.timeout)
 
     def _upload_file_control(self, file_name, overwrite=False):
-        print(file_name)
         path_to_local_file = os.path.join(self.path_source, file_name)
         try:
             with open(path_to_local_file, "rb") as file_obj:
@@ -95,27 +98,24 @@ class UploaderToCloud:
                     f"Не удалось загрузить файл {file_name}. Проверьте соединение."
                 )
 
+    def _mode_control(self, file_signal):
+        message = _file_signals[file_signal]
+        self.file_storage.delete(file_signal)
+        logger.info(message)
+        if file_signal == exit_from_program:
+            exit(0)
+        self.pause = not int(file_signal)
+
     def check_local_folder(self):
         """Проверка локальной папки, загрузка в облако новых, или измененных файлов"""
         self._initializing()
-        file_list = LocalsFiles.all_files
-        for file in file_list:
+        for file in self.file_list:
             # Отключение слежения, если создан файл "0"
-            if file == "0":
-                os.remove(file)
-                logger.info(f"Синхронизация отключена.")
-                self.pause = True
-                return
-            elif file == "1":
-                os.remove(file)
-                logger.info(f"Синхронизация включена.")
-                self.pause = False
-            elif file == "---":
-                os.remove(file)
-                logger.info(f"Программа завершена.")
-                exit(0)
+            if file in _file_signals:
+                self._mode_control(file)
             elif not self.pause:
-                data_change_source = datetime.fromtimestamp(os.path.getmtime(file))
+                last_modified_time = self.file_storage.get_last_modified_time(file)
+                data_change_source = datetime.fromtimestamp(last_modified_time)
                 # Загрузка файла в облако
                 if file not in self.cloud_info.keys() and not self.error_check:
                     is_loaded = self._upload_file_control(file)
@@ -144,7 +144,7 @@ class UploaderToCloud:
         cloud_files = self.cloud_info
         try:
             for file_name in cloud_files:
-                if file_name not in LocalsFiles.all_files:
+                if file_name not in self.file_list:
                     result = self.storage.delete(file_name)
                     if result:
                         logger.info(f"Файл {file_name} удален")

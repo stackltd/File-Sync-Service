@@ -1,6 +1,5 @@
 import argparse
 import sys
-import os
 import time
 
 from loguru import logger
@@ -9,9 +8,9 @@ from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
-from control.cloud_control import UploaderToCloud
+from control.synchronizer import UploaderToCloud
+from locals.local_storage import LocalsFiles
 from settings import clouds
-
 
 parser = argparse.ArgumentParser(description="Сервис синхронизации файлов")
 # приём нужного облако из консоли
@@ -23,11 +22,10 @@ cloud = clouds.get(current_cloud)
 if cloud is None:
     logger.error("Ошибка в названии облака. Программа завершена")
     exit(1)
+
 token = cloud.get("token")
 
 path_source = cloud.get("path_source")
-os.chdir(path_source)
-
 path_to_log = cloud.get("path_to_log")
 time_reload = cloud.get("time_reload")
 base_url = cloud.get("base_url")
@@ -35,9 +33,12 @@ path_dist = cloud.get("path_dist")
 cloud_scan_time_delta = cloud.get("cloud_scan_time_delta")
 timeout = cloud.get("timeout")
 
-storage = cloud.get("storage")(token, base_url, path_dist)
-uploader = UploaderToCloud(storage, cloud_scan_time_delta, timeout, path_source)
+file_storage = LocalsFiles(path_source)
+cloud_storage = cloud.get("storage")(token, base_url, path_dist)
 
+uploader = UploaderToCloud(
+    file_storage, cloud_storage, cloud_scan_time_delta, timeout, path_source
+)
 
 logger.remove()
 format_out = "{module} <green>{time:YYYY-MM-DD HH:mm:ss,SSS}</green> {level} <level>{message}</level>"
@@ -65,14 +66,14 @@ def main():
             time.sleep(time_reload)
         except KeyError:
             logger.error(
-                f"Ошибка при получении данных с {storage}."
+                f"Ошибка при получении данных с {cloud_storage}."
                 " Возможно, в облаке отсутствует указанная папка, или не найден токен"
             )
             time.sleep(time_reload)
         except ConnectionError as ex:
             uploader.error_check = True
             logger.error(
-                f"{ex} Ошибка при получении данных с {storage}. Не удается установить связь с облаком"
+                f"{ex} Ошибка при получении данных с {cloud_storage}. Не удается установить связь с облаком"
             )
             time.sleep(time_reload)
 
